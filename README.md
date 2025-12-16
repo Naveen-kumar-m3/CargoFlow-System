@@ -1,71 +1,45 @@
-# 🚚 Transport Analytics Dashboard
+# CargoFlow System 📦
 
-An analytical platform created with **Streamlit** and **Plotly**, enabling dynamic filtering by **Transporter**, **Location**, **Payment Mode**, and **Date Range**. It provides real-time shipment metrics, value distribution insights, and includes a report download feature for effective logistics management.
-
-## Features
-
-- **File Upload**: Upload CSV, Excel, or other supported file formats.
-- **Dynamic Filters**: Filter data by transporter, loading location, invoice location, payment method, and date range.
-- **Key Metrics**: Display total trips, total metric tons transported, and total invoice value.
-- **Visualizations**:
-  - Pie charts for transporter distribution by quantity and amount.
-  - Pie charts for loading location and payment method distribution.
-  - Bar chart for top 5 vehicles by metric tons transported.
-- **Download Filtered Data**: Export the filtered dataset as a CSV file for further analysis.
-
-## How to Run the Application
-
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/your-username/thenpandiyan-transport.git
-   cd thenpandiyan-transport
-2. **Set Up a Virtual Environment (Optional but Recommended)**:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-3. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-4. **Run the Streamlit App**:
-   ```bash
-   streamlit run app.py
-5. **Access the Dashboard**:
-   ```bash
-   Open your browser and navigate to http://localhost:8501
-
----
-## Screenshot
-![image](https://github.com/user-attachments/assets/86e2392c-aeda-4a38-bc7d-4fdad97119f9)
-
-
----
-## Contributing
-Contributions are welcome! If you'd like to contribute, please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bugfix:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m "Add your message here"
-   ```
-4. Push to the branch:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-5. Open a pull request.
+CargoFlow System is a web-based logistics analytics platform designed to track cargo movement, analyze shipment performance, and support data-driven decision-making in supply chain operations.
 
 ---
 
-## Contact
-For questions or feedback, please contact:
+## 🎯 Project Objective
+The objective of this project is to build a modular and scalable logistics dashboard that enables operational teams to visualize cargo flow, monitor key metrics, and generate analytical insights from structured logistics data.
 
-- **Shyam GK**  
-- **Email:** shyamgokulkrish@gmail.com  
-- **GitHub:** [Shyam GK](https://github.com/Shyam-GK)
+---
 
-Enjoy using **AirNavPro**!
+## 🚀 Key Features
+- Upload logistics data (Excel / CSV)
+- Dynamic filtering by logistics partner, location, payment mode, and date range
+- Cargo quantity and invoice value analysis
+- Interactive dashboards and charts
+- Export filtered data for reporting
 
-   
+---
+
+## 🛠️ Tech Stack
+- **Frontend / UI**: Streamlit
+- **Backend Logic**: Python
+- **Data Processing**: Pandas
+- **Visualization**: Plotly
+
+---
+
+## 📂 Project Structure
+CargoFlow-System/
+├── app.py
+├── data/
+│ └── March.xls
+├── requirements.txt
+├── runtime.txt
+├── Dockerfile
+└── README.md
+
+
+---
+
+## ▶️ How to Run the Project
+```bash
+pip install -r requirements.txt
+streamlit run app.py
