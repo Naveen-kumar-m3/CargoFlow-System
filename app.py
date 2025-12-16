@@ -1,32 +1,34 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-import os
 import warnings
-warnings.filterwarnings('ignore')
 
+warnings.filterwarnings("ignore")
+
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="CargoFlow System",
     page_icon="📦",
     layout="wide"
 )
+
 st.title("📦 CargoFlow System")
 st.subheader("Logistics & Cargo Analytics Dashboard")
-
 st.markdown('<style>div.block-container{padding-top:1rem;}</style>', unsafe_allow_html=True)
 
-fl = st.file_uploader(":file_folder: Upload a file", type=(["csv","txt","xlsx","xls"]))
+# ---------------- DATA LOADING ----------------
+fl = st.file_uploader("📂 Upload Logistics File", type=["csv", "xlsx", "xls"])
+
 if fl is not None:
-    filename = fl.name
-    st.write(filename)
     df = pd.read_excel(fl)
 else:
     df = pd.read_excel("data/March.xls")
-    st.write("Columns in dataset:", df.columns.tolist())
-    # Clean column names
+
+# Clean column names
 df.columns = df.columns.str.strip()
 
-# Find quantity column dynamically
+# ---------------- FIND REQUIRED COLUMNS ----------------
+# Quantity column
 quantity_col = None
 for col in df.columns:
     if "QNT" in col.upper() and "KG" in col.upper():
@@ -34,148 +36,160 @@ for col in df.columns:
         break
 
 if quantity_col is None:
-    st.error("Quantity column (KG) not found in uploaded file.")
+    st.error("Quantity column (KG) not found in dataset.")
     st.stop()
 
+# Date column
+date_columns = [col for col in df.columns if "DATE" in col.upper()]
+if not date_columns:
+    st.error("Date column not found in dataset.")
+    st.stop()
 
+selected_date_column = date_columns[0]
+df[selected_date_column] = pd.to_datetime(df[selected_date_column])
 
+# ---------------- SIDEBAR FILTERS ----------------
+with st.sidebar:
+    st.subheader("🔍 Filter Selection")
+    st.markdown("---")
 
+    transporter = st.multiselect(
+        "Logistics Partner",
+        df["TRANSPORTER"].unique()
+    )
 
-date_columns=[col for col in df.columns if 'DATE' in col.upper()]
+    loading_location = st.multiselect(
+        "Loading Location",
+        df["LOADING LOCATION"].unique()
+    )
 
-if len(date_columns)==0:
-    st.error("no date columns found")
-else:
-    selected_date_column = date_columns[0]  # Selecting the first date column by default
-    df[selected_date_column] = pd.to_datetime(df[selected_date_column])
-    startDate = pd.to_datetime(df[selected_date_column]).min()
-    endDate = pd.to_datetime(df[selected_date_column]).max()
+    inv_location = st.multiselect(
+        "Invoice Location",
+        df["INV LOCATION"].unique()
+    )
 
-    # Sidebar selection boxes
-    with st.sidebar:
-        st.sidebar.subheader("Filter Selection")
-        st.sidebar.markdown("---")
-        transporter = st.sidebar.multiselect("Select Logistic Partner", ['--Select--'] + list(df["TRANSPORTER"].unique()))
-        loading_location = st.sidebar.multiselect("Select Loading Location", ['--Select--'] + list(df["LOADING LOCATION"].unique()))
-        inv_location = st.sidebar.multiselect("Select Invoice Location", ['--Select--'] + list(df["INV LOCATION"].unique()))
-        payment_by = st.sidebar.multiselect("Select Payment Mode", ['--Select--'] + list(df["PAYMENT BY"].unique()))
-    # Main window start and end date inputs
-    col1,col2=st.columns(2)
-    with col1:
-        date1=st.date_input("Start Date",startDate)
-    with col2:
-        date2=st.date_input("End Date",endDate)
-    # Filter the data based on selection
-    filtered_df=df[
-        (df["TRANSPORTER"].isin(transporter) if transporter and transporter[0] != "--Select--" else True) &
-        (df["LOADING LOCATION"].isin(loading_location) if loading_location and loading_location[0] != "--Select--" else True) &
-        (df["INV LOCATION"].isin(inv_location) if inv_location and inv_location[0] != "--Select--" else True) &
-        (df["PAYMENT BY"].isin(payment_by) if payment_by and payment_by[0] != "--Select--" else True) &
-        (df[selected_date_column] >= pd.to_datetime(date1)) &
-        (df[selected_date_column] <= pd.to_datetime(date2))
-    ]
+    payment_by = st.multiselect(
+        "Payment Mode",
+        df["PAYMENT BY"].unique()
+    )
 
-    # Convert INV-QNT-KG to metric ton
-    filtered_df['INV -QNT-MT'] = filtered_df[quantity_col] / 1000
+# Date range
+col1, col2 = st.columns(2)
+with col1:
+    date1 = st.date_input("Start Date", df[selected_date_column].min())
+with col2:
+    date2 = st.date_input("End Date", df[selected_date_column].max())
 
-    # Calculate total metric ton for each transporter
-    transporter_metric_ton=filtered_df.groupby('TRANSPORTER').agg({'INV -QNT-MT': 'sum', 'INV -VALUE': 'sum'}).reset_index()
+# ---------------- FILTER DATA ----------------
+filtered_df = df[
+    (df["TRANSPORTER"].isin(transporter) if transporter else True) &
+    (df["LOADING LOCATION"].isin(loading_location) if loading_location else True) &
+    (df["INV LOCATION"].isin(inv_location) if inv_location else True) &
+    (df["PAYMENT BY"].isin(payment_by) if payment_by else True) &
+    (df[selected_date_column] >= pd.to_datetime(date1)) &
+    (df[selected_date_column] <= pd.to_datetime(date2))
+]
 
-    # Pie chart for Transporter including metric ton
-    st.subheader("Transporter Distribution by Quantity")
-    fig_transporter_quantity=px.pie(transporter_metric_ton,names='TRANSPORTER',values='INV -QNT-MT',title='Transporter Distribution by Quantity')
-    st.plotly_chart(fig_transporter_quantity,use_container_width=True)
+# Derived column
+filtered_df["INV -QNT-MT"] = filtered_df[quantity_col] / 1000
 
-    # Table for Transporter Distribution by Quantity
-    transporter_quantity = transporter_metric_ton[['TRANSPORTER', 'INV -QNT-MT']].sort_values(by='INV -QNT-MT', ascending=False)
-    st.write(transporter_quantity)
+# ---------------- KPI SECTION ----------------
+st.markdown("## 📊 Operational Overview")
 
-    # Pie chart for Transporter including amount
-    st.subheader("Transporter Distribution by Amount")
-    fig_transporter_amount = px.pie(transporter_metric_ton, names='TRANSPORTER', values='INV -VALUE', title='Transporter Distribution by Amount')
-    st.plotly_chart(fig_transporter_amount, use_container_width=True)
+k1, k2, k3 = st.columns(3)
+k1.metric("Total Trips", f"{filtered_df.shape[0]:,}")
+k2.metric("Total Cargo", f"{filtered_df['INV -QNT-MT'].sum():,.2f} MT")
+k3.metric("Total Invoice Value", f"₹{filtered_df['INV -VALUE'].sum():,.2f}")
 
-    # Table for Transporter Distribution by Amount
-    transporter_amount = transporter_metric_ton[['TRANSPORTER', 'INV -VALUE']].sort_values(by='INV -VALUE', ascending=False)
-    st.write(transporter_amount)
+st.markdown("---")
 
-    # Pie chart for Loading Location
-    st.subheader("Loading Location Distribution")
-    fig_loading_location = px.pie(filtered_df, names='LOADING LOCATION', title='Loading Location Distribution')
-    st.plotly_chart(fig_loading_location, use_container_width=True)
+# ---------------- TRANSPORTER INSIGHTS ----------------
+transporter_summary = (
+    filtered_df
+    .groupby("TRANSPORTER")
+    .agg({
+        "INV -QNT-MT": "sum",
+        "INV -VALUE": "sum"
+    })
+    .reset_index()
+)
 
-    # Table for Loading Location Distribution
-    loading_location_distribution = filtered_df['LOADING LOCATION'].value_counts().reset_index()
-    loading_location_distribution.columns = ['Loading Location', 'Count']
-    loading_location_distribution = loading_location_distribution.sort_values(by='Count', ascending=False)
-    st.write(loading_location_distribution)
+fig_transporter_quantity = px.pie(
+    transporter_summary,
+    names="TRANSPORTER",
+    values="INV -QNT-MT",
+    title="Transporter Distribution by Quantity (MT)"
+)
 
-    # Pie chart for Payment By
-    st.subheader("Payment By Distribution")
-    fig_payment_by = px.pie(filtered_df, names='PAYMENT BY', title='Payment By Distribution')
-    st.plotly_chart(fig_payment_by, use_container_width=True)
+fig_transporter_amount = px.pie(
+    transporter_summary,
+    names="TRANSPORTER",
+    values="INV -VALUE",
+    title="Transporter Distribution by Invoice Value"
+)
 
-    # Table for Payment By Distribution
-    payment_by_distribution = filtered_df['PAYMENT BY'].value_counts().reset_index()
-    payment_by_distribution.columns = ['Payment By', 'Count']
-    payment_by_distribution = payment_by_distribution.sort_values(by='Count', ascending=False)
-    st.write(payment_by_distribution)
+st.markdown("## 🚚 Transporter Insights")
+c1, c2 = st.columns(2)
+c1.plotly_chart(fig_transporter_quantity, use_container_width=True)
+c2.plotly_chart(fig_transporter_amount, use_container_width=True)
 
-    # Display filtered data
-    st.subheader("Filtered Data")
+st.markdown("---")
+
+# ---------------- LOCATION & PAYMENT ----------------
+fig_loading_location = px.pie(
+    filtered_df,
+    names="LOADING LOCATION",
+    title="Loading Location Distribution"
+)
+
+fig_payment_by = px.pie(
+    filtered_df,
+    names="PAYMENT BY",
+    title="Payment Mode Distribution"
+)
+
+st.markdown("## 📍 Location & Payment Insights")
+c1, c2 = st.columns(2)
+c1.plotly_chart(fig_loading_location, use_container_width=True)
+c2.plotly_chart(fig_payment_by, use_container_width=True)
+
+st.markdown("---")
+
+# ---------------- VEHICLE PERFORMANCE ----------------
+top_vehicles = (
+    filtered_df
+    .groupby("VEHICLE NUMBER")["INV -QNT-MT"]
+    .sum()
+    .reset_index()
+    .sort_values(by="INV -QNT-MT", ascending=False)
+    .head(5)
+)
+
+fig_top_vehicles = px.bar(
+    top_vehicles,
+    x="VEHICLE NUMBER",
+    y="INV -QNT-MT",
+    title="Top 5 Vehicles by Cargo Transported (MT)"
+)
+
+st.markdown("## 🏆 Vehicle Performance")
+c1, c2 = st.columns(2)
+c1.plotly_chart(fig_top_vehicles, use_container_width=True)
+c2.write(top_vehicles)
+
+# ---------------- EXPANDABLE DETAILS ----------------
+with st.expander("📄 View Detailed Data & Reports"):
+    st.subheader("Filtered Dataset")
     st.write(filtered_df)
 
-    # Calculate number of days for each trip for each vehicle
-    df = df.sort_values(by=['VEHICLE NUMBER', 'INV -DATE'])
-    df['Next INV Date'] = df.groupby('VEHICLE NUMBER')[selected_date_column].shift(-1)
-    df['Days for Trip'] = (df['Next INV Date'] - df[selected_date_column]).dt.days
-
-    # Table for Number of Days for Each Vehicle Trip
-    days_for_trip_table = df[['VEHICLE NUMBER', selected_date_column, 'Next INV Date', 'Days for Trip']].dropna()
-    st.subheader("Number of Days for Each Vehicle Trip")
-    st.write(days_for_trip_table)
-
-    # Key Metrics Section
-    st.subheader("📊 Key Metrics")
-
-    # Calculate key metrics
-    total_trips = filtered_df.shape[0]  # Total number of trips
-    total_metric_tons = filtered_df['INV -QNT-MT'].sum()  # Total metric tons
-    total_invoice_value = filtered_df['INV -VALUE'].sum()  # Total invoice value
-
-    # Display key metrics in columns
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(label="Total Trips", value=f"{total_trips:,}")
-    with col2:
-        st.metric(label="Total Metric Tons", value=f"{total_metric_tons:,.2f} MT")
-    with col3:
-        st.metric(label="Total Invoice Value", value=f"${total_invoice_value:,.2f}")
-
-    # Top 5 Vehicles with Highest Metric Tons Transported
-    st.subheader("🏆 Top 5 Vehicles with Highest Metric Tons Transported")
-
-    # Group by vehicle and calculate total metric tons
-    top_vehicles = filtered_df.groupby('VEHICLE NUMBER')['INV -QNT-MT'].sum().reset_index()
-    top_vehicles = top_vehicles.sort_values(by='INV -QNT-MT', ascending=False).head(5)  # Get top 5
-
-    # Display the top 5 vehicles
-    st.write(top_vehicles)
-
-    # Optional: Add a bar chart for visualization
-    fig_top_vehicles = px.bar(
-        top_vehicles,
-        x='VEHICLE NUMBER',
-        y='INV -QNT-MT',
-        title="Top 5 Vehicles by Metric Tons Transported",
-        labels={'INV -QNT-MT': 'Metric Tons', 'VEHICLE NUMBER': 'Vehicle Number'}
+    csv = filtered_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "Download Filtered Data",
+        data=csv,
+        file_name="Filtered_Data.csv",
+        mime="text/csv"
     )
-    st.plotly_chart(fig_top_vehicles, use_container_width=True)
-    # Download filtered data
-    csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.download_button('Download Filtered Data', data=csv, file_name="Filtered_Data.csv", mime="text/csv")
-    st.markdown("---")
-    st.markdown(
-    "© 2025 CargoFlow System | Logistics Analytics Platform",
-    unsafe_allow_html=True
-)
+
+# ---------------- FOOTER ----------------
+st.markdown("---")
+st.caption("© 2025 CargoFlow System | Logistics Analytics Platform")
