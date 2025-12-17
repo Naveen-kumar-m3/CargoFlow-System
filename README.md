@@ -43,3 +43,33 @@ CargoFlow-System/
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
+
+
+The dashboard follows a top-down information hierarchy:
+
+Operational Overview (KPIs)
+Displays total trips, total cargo (MT), and invoice value.
+
+Transporter Insights
+Visualizes cargo quantity and invoice value by logistics partner.
+
+Location & Payment Insights
+Shows cargo distribution by loading location and payment mode.
+
+Vehicle Performance
+Highlights top vehicles by transported cargo.
+
+Detailed Data (Expandable Section)
+Provides access to filtered data tables and downloadable reports.
+
+📌 Use Case
+
+CargoFlow System can be used by:
+
+Logistics operations teams
+
+Supply chain analysts
+
+Transport management teams
+
+to monitor shipment trends, evaluate transporter performance, and support operational decision-making.
