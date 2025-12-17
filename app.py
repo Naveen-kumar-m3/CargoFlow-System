@@ -3,6 +3,34 @@ import plotly.express as px
 import pandas as pd
 import warnings
 
+
+def load_data(uploaded_file):
+    if uploaded_file is not None:
+        df = pd.read_excel(uploaded_file)
+    else:
+        df = pd.read_excel("data/March.xls")
+    df.columns = df.columns.str.strip()
+    return df
+
+
+def find_quantity_column(df):
+    for col in df.columns:
+        if "QNT" in col.upper() and "KG" in col.upper():
+            return col
+    return None
+
+
+def filter_data(df, transporter, loading_location, inv_location, payment_by, date_col, start_date, end_date):
+    return df[
+        (df["TRANSPORTER"].isin(transporter) if transporter else True) &
+        (df["LOADING LOCATION"].isin(loading_location) if loading_location else True) &
+        (df["INV LOCATION"].isin(inv_location) if inv_location else True) &
+        (df["PAYMENT BY"].isin(payment_by) if payment_by else True) &
+        (df[date_col] >= pd.to_datetime(start_date)) &
+        (df[date_col] <= pd.to_datetime(end_date))
+    ]
+
+
 warnings.filterwarnings("ignore")
 
 # ---------------- PAGE CONFIG ----------------
@@ -19,21 +47,16 @@ st.markdown('<style>div.block-container{padding-top:1rem;}</style>', unsafe_allo
 # ---------------- DATA LOADING ----------------
 fl = st.file_uploader("📂 Upload Logistics File", type=["csv", "xlsx", "xls"])
 
-if fl is not None:
-    df = pd.read_excel(fl)
-else:
-    df = pd.read_excel("data/March.xls")
+df = load_data(fl)
 
-# Clean column names
-df.columns = df.columns.str.strip()
 
 # ---------------- FIND REQUIRED COLUMNS ----------------
 # Quantity column
-quantity_col = None
-for col in df.columns:
-    if "QNT" in col.upper() and "KG" in col.upper():
-        quantity_col = col
-        break
+quantity_col = find_quantity_column(df)
+
+if quantity_col is None:
+    st.error("Quantity column (KG) not found in dataset.")
+    st.stop()
 
 if quantity_col is None:
     st.error("Quantity column (KG) not found in dataset.")
@@ -81,17 +104,22 @@ with col2:
     date2 = st.date_input("End Date", df[selected_date_column].max())
 
 # ---------------- FILTER DATA ----------------
-filtered_df = df[
-    (df["TRANSPORTER"].isin(transporter) if transporter else True) &
-    (df["LOADING LOCATION"].isin(loading_location) if loading_location else True) &
-    (df["INV LOCATION"].isin(inv_location) if inv_location else True) &
-    (df["PAYMENT BY"].isin(payment_by) if payment_by else True) &
-    (df[selected_date_column] >= pd.to_datetime(date1)) &
-    (df[selected_date_column] <= pd.to_datetime(date2))
-]
+filtered_df = filter_data(
+    df,
+    transporter,
+    loading_location,
+    inv_location,
+    payment_by,
+    selected_date_column,
+    date1,
+    date2
+)
+
 
 # Derived column
+filtered_df = filtered_df.copy()
 filtered_df["INV -QNT-MT"] = filtered_df[quantity_col] / 1000
+
 
 # ---------------- KPI SECTION ----------------
 st.markdown("## 📊 Operational Overview")
