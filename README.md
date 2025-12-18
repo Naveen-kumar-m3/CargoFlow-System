@@ -15,6 +15,9 @@ The objective of this project is to build a modular and scalable logistics dashb
 - Cargo quantity and invoice value analysis
 - Interactive dashboards and charts
 - Export filtered data for reporting
+- Intelligent data validation with user-friendly error messages
+- Graceful handling of empty filters and invalid date ranges
+
 
 ---
 
