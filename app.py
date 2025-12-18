@@ -48,6 +48,23 @@ st.markdown('<style>div.block-container{padding-top:1rem;}</style>', unsafe_allo
 fl = st.file_uploader("📂 Upload Logistics File", type=["csv", "xlsx", "xls"])
 
 df = load_data(fl)
+required_columns = [
+    "TRANSPORTER",
+    "LOADING LOCATION",
+    "INV LOCATION",
+    "PAYMENT BY",
+    "INV -VALUE",
+    "VEHICLE NUMBER"
+]
+
+missing_cols = [col for col in required_columns if col not in df.columns]
+
+if missing_cols:
+    st.error(f"Missing required columns: {', '.join(missing_cols)}")
+    st.stop()
+if fl is not None:
+    st.success(f"File '{fl.name}' uploaded successfully")
+
 
 
 # ---------------- FIND REQUIRED COLUMNS ----------------
@@ -119,6 +136,9 @@ filtered_df = filter_data(
 # Derived column
 filtered_df = filtered_df.copy()
 filtered_df["INV -QNT-MT"] = filtered_df[quantity_col] / 1000
+if filtered_df.empty:
+    st.warning("No data available for the selected filters. Please adjust your selection.")
+    st.stop()
 
 
 # ---------------- KPI SECTION ----------------
