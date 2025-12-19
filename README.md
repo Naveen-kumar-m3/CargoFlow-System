@@ -2,6 +2,15 @@
 
 CargoFlow System is a web-based logistics analytics platform designed to track cargo movement, analyze shipment performance, and support data-driven decision-making in supply chain operations.
 
+
+
+
+
+![alt text](image.png)
+![alt text](image-1.png)
+![alt text](image-2.png)
+![alt text](image-4.png)
+![alt text](image-3.png)
 ---
 
 ## 🎯 Project Objective
